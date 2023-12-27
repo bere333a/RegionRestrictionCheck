@@ -12,6 +12,8 @@ Font_Suffix="\033[0m"
 
 language="e"
 
+TEMP_DIRECTORY=$(mktemp --directory)
+
 while getopts ":I:M:ESX:T:P:" optname; do
   case "$optname" in
   "I")
@@ -820,15 +822,15 @@ MediaUnlockTest_ITVHUB() {
 }
 
 MediaUnlockTest_iQYI_Region() {
-  curl $useNIC $usePROXY $xForward -${1} ${ssll} -s -I --max-time 10 "https://www.iq.com/" >~/iqiyi
+  curl $useNIC $usePROXY $xForward -${1} ${ssll} -s -I --max-time 10 "https://www.iq.com/" >"$TEMP_DIRECTORY"/iqiyi
 
   if [ $? -eq 1 ]; then
     echo -n -e "\r iQyi Oversea Region:\t\t\t${Font_Red}Failed (Network Connection)${Font_Suffix}\n"
     return
   fi
 
-  result=$(cat ~/iqiyi | grep 'mod=' | awk '{print $2}' | cut -f2 -d'=' | cut -f1 -d';')
-  rm ~/iqiyi >/dev/null 2>&1
+  result=$(cat "$TEMP_DIRECTORY"/iqiyi | grep 'mod=' | awk '{print $2}' | cut -f2 -d'=' | cut -f1 -d';')
+  rm "$TEMP_DIRECTORY"/iqiyi >/dev/null 2>&1
 
   if [ -n "$result" ]; then
     if [[ "$result" == "ntw" ]]; then
@@ -1893,10 +1895,10 @@ MediaUnlockTest_NetflixCDN() {
 
   local CDNAddr=$(echo $tmpresult | sed 's/.*"url":"//' | cut -f3 -d"/")
   if [[ "$1" == "6" ]]; then
-    nslookup -q=AAAA $CDNAddr >~/v6_addr.txt
-    ifAAAA=$(cat ~/v6_addr.txt | grep 'AAAA address' | awk '{print $NF}')
+    nslookup -q=AAAA $CDNAddr >"$TEMP_DIRECTORY"/v6_addr.txt
+    ifAAAA=$(cat "$TEMP_DIRECTORY"/v6_addr.txt | grep 'AAAA address' | awk '{print $NF}')
     if [ -z "$ifAAAA" ]; then
-      CDNIP=$(cat ~/v6_addr.txt | grep Address | sed -n '$p' | awk '{print $NF}')
+      CDNIP=$(cat "$TEMP_DIRECTORY"/v6_addr.txt | grep Address | sed -n '$p' | awk '{print $NF}')
     else
       CDNIP=${ifAAAA}
     fi
@@ -1906,7 +1908,7 @@ MediaUnlockTest_NetflixCDN() {
 
   if [ -z "$CDNIP" ]; then
     echo -n -e "\r Netflix Preferred CDN:\t\t\t${Font_Red}Failed (CDN IP Not Found)${Font_Suffix}\n"
-    rm -rf ~/v6_addr.txt
+    rm -rf "$TEMP_DIRECTORY"/v6_addr.txt
     return
   fi
 
@@ -1928,15 +1930,15 @@ MediaUnlockTest_NetflixCDN() {
 
   if [ -n "$location" ] && [[ "$CDN_ISP" == "Netflix Streaming Services" ]]; then
     echo -n -e "\r Netflix Preferred CDN:\t\t\t${Font_Green}$location ${Font_Suffix}\n"
-    rm -rf ~/v6_addr.txt
+    rm -rf "$TEMP_DIRECTORY"/v6_addr.txt
     return
   elif [ -n "$location" ] && [[ "$CDN_ISP" != "Netflix Streaming Services" ]]; then
     echo -n -e "\r Netflix Preferred CDN:\t\t\t${Font_Yellow}Associated with [$CDN_ISP] in [$location]${Font_Suffix}\n"
-    rm -rf ~/v6_addr.txt
+    rm -rf "$TEMP_DIRECTORY"/v6_addr.txt
     return
   elif [ -n "$location" ] && [ -z "$CDN_ISP" ]; then
     echo -n -e "\r Netflix Preferred CDN:\t\t\t${Font_Red}No ISP Info Founded${Font_Suffix}\n"
-    rm -rf ~/v6_addr.txt
+    rm -rf "$TEMP_DIRECTORY"/v6_addr.txt
     return
   fi
 }
@@ -3811,6 +3813,8 @@ cls() {
 }
 
 Goodbye() {
+  rm -r "$TEMP_DIRECTORY"
+
   if [ "${num}" == 1 ]; then
     ADN=TW
   elif [ "${num}" == 3 ]; then
